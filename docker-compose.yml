@@ -1,0 +1,109 @@
+version: "3.8"
+
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  OpenChat Local — Portainer Stack                           ║
+# ║                                                              ║
+# ║  Deploy via Portainer:                                       ║
+# ║  1. Stacks → Add stack → Web editor                        ║
+# ║  2. Paste this file                                         ║
+# ║  3. Scroll down → set Environment variables                 ║
+# ║  4. Click "Deploy the stack"                                ║
+# ║                                                              ║
+# ║  Environment variables to set in Portainer:                 ║
+# ║    DEFAULT_MODEL       = qwen2.5:1.5b                      ║
+# ║    WATCH_FOLDER_HOST   = /home/user/Documents               ║
+# ║    PERFORMANCE_PROFILE = low                                ║
+# ║    APP_PORT            = 8000                               ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+services:
+
+  # ── Ollama (LLM Engine) ──────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: openchat-ollama
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # ── GPU Support (uncomment ONE section) ────────────
+    #
+    # NVIDIA GPU (requires nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    #
+    # AMD GPU (requires ROCm drivers):
+    # devices:
+    #   - /dev/kfd
+    #   - /dev/dri
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Model Puller (runs once, then exits) ─────────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: openchat-model-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["ollama", "pull", "${DEFAULT_MODEL:-qwen2.5:1.5b}"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+
+  # ── OpenChat Local (App Server) ──────────────────────
+  openchat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: openchat-local:latest
+    container_name: openchat-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-qwen2.5:1.5b}
+      - PERFORMANCE_PROFILE=${PERFORMANCE_PROFILE:-low}
+      - SEARXNG_URL=http://searxng:8080
+      - WATCH_FOLDER=/data/watch
+      - WATCH_INTERVAL=${WATCH_INTERVAL:-3600}
+      - CHROMA_PERSIST_DIR=/data/chromadb
+      - UPLOAD_DIR=/data/uploads
+    volumes:
+      - openchat_data:/data
+      - ${WATCH_FOLDER_HOST:-./_watch}:/data/watch:ro
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+  # ── SearXNG (Web Search Engine) ──────────────────────
+  searxng:
+    image: searxng/searxng:latest
+    container_name: openchat-searxng
+    restart: unless-stopped
+    ports:
+      - "${SEARXNG_PORT:-8888}:8080"
+    volumes:
+      - searxng_data:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8888}
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-openchatlocalsecretkey}
+
+volumes:
+  ollama_data:
+    name: openchat_ollama_data
+  openchat_data:
+    name: openchat_app_data
+  searxng_data:
+    name: openchat_searxng_data

@@ -1,0 +1,13 @@
+--- static/css/style.css
++++ static/css/style.css
+@@ -801,6 +801,10 @@
+     margin-top: 0px;
+ }
+ 
++.message-ai .branch-nav {
++    margin-top: 8px;
++}
++
+ .branch-nav-btn {
+     background: none;
+     border: none;

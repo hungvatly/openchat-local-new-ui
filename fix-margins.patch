@@ -1,0 +1,22 @@
+--- static/css/style.css
++++ static/css/style.css
+@@ -634,8 +634,8 @@
+     padding-top: 0;
+     border-top: none;
+     align-items: flex-end;
+-    padding-bottom: 4px;
+-    margin-right: 6px;
++    padding-bottom: 0px;
++    margin-right: 0px;
+     flex-wrap: nowrap;
+ }
+ 
+@@ -798,7 +798,7 @@
+     border-radius: 20px;
+     font-size: 11px;
+     color: var(--text-muted);
+-    margin-top: 6px;
++    margin-top: 0px;
+ }
+ 
+ .branch-nav-btn {
