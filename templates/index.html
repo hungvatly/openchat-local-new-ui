@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="description" content="OpenChat Local — Private AI assistant running entirely on your machine. Chat with your documents, search the web, and use AI personas.">
+    <title>OpenChat Local</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="/static/css/style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- DOMPurify -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <!-- Math (KaTeX) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <!-- Mermaid Diagrams -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/app.js?v=12" defer></script>
+    <script src="/static/js/taskMode.js?v=1" defer></script>
+</head>
+<body>
+<!-- Draggable titlebar for native macOS window dragging -->
+<div class="app-titlebar" id="app-titlebar"></div>
+<div class="app">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2 L22 12 L12 22 L2 12 Z"/>
+                </svg>
+            </div>
+            <span class="sidebar-title" data-i18n="title_openchat">OpenChat</span>
+            <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+        </div>
+
+        <button class="sidebar-new-chat" id="btn-new-chat" title="New Chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span data-i18n="btn_new_chat">New Chat</span>
+        </button>
+
+
+        <!-- Search -->
+        <!-- Search -->
+        <div class="sidebar-search-block" style="padding:0 10px 4px">
+            <input type="text" id="sidebar-search" placeholder="Search conversations..." style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-primary);padding:6px 10px;font-size:12px;font-family:var(--font-main);outline:none" oninput="searchConversations(this.value)">
+        </div>
+
+        <!-- Folder filter -->
+        <div class="sidebar-search-block" style="padding:0 10px 4px">
+            <select id="folder-filter" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-xs);color:var(--text-secondary);padding:4px 8px;font-size:12px;font-family:var(--font-main);outline:none" onchange="filterByFolder(this.value)">
+                <option value="">All folders</option>
+            </select>
+        </div>
+
+        <div class="sidebar-sessions" id="sidebar-sessions"></div>
+
+        <div class="sidebar-tools">
+            <button class="sidebar-tool-btn" id="btn-upload" title="Documents" onclick="openUploadPanel()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span data-i18n="btn_docs">Documents</span>
+            </button>
+            <button class="sidebar-tool-btn" id="btn-templates" title="Templates" onclick="openTemplatesPanel()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+                <span data-i18n="btn_templates">Templates</span>
+            </button>
+            <button class="sidebar-tool-btn" id="btn-memory" title="AI Memory" onclick="openMemoryPanel()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                <span data-i18n="btn_memory">Memory</span>
+            </button>
+            <button class="sidebar-tool-btn" id="btn-settings" title="Settings" onclick="openSettingsPanel()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span data-i18n="btn_settings">Settings</span>
+            </button>
+            <button class="sidebar-tool-btn" id="btn-task-mode" title="Task Mode" onclick="openTaskMode()" style="display: none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Cowork</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main" style="flex-direction: row;">
+        <!-- Left Side (Chat & Input) -->
+        <div class="chat-container" style="flex:1; display:flex; flex-direction:column; min-width:300px; position:relative;">
+            <!-- Welcome screen -->
+            <div class="welcome">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2 L22 12 L12 22 L2 12 Z"/>
+                    </svg>
+                    <h3 data-i18n="title_openchat">OpenChat</h3>
+                    <p data-i18n="msg_no_active_chat">Ask anything to start a new conversation.</p>
+                </div>
+
+                <div class="prompt-cards">
+                    <div class="prompt-card" onclick="document.getElementById('chat-input').value = this.innerText; document.getElementById('chat-input').focus();">
+                        <div class="prompt-card-text" data-i18n="prompt_card_1">Summarize the key points from my documents</div>
+                        <svg class="prompt-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </div>
+                    <div class="prompt-card" onclick="document.getElementById('chat-input').value = this.innerText; document.getElementById('chat-input').focus();">
+                        <div class="prompt-card-text" data-i18n="prompt_card_2">Write an email reply based on my documents</div>
+                        <svg class="prompt-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <div class="prompt-card" onclick="document.getElementById('chat-input').value = this.innerText; document.getElementById('chat-input').focus();">
+                        <div class="prompt-card-text" data-i18n="prompt_card_3">Explain this topic like I'm 5 years old</div>
+                        <svg class="prompt-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <div class="prompt-card" onclick="document.getElementById('chat-input').value = this.innerText; document.getElementById('chat-input').focus();">
+                        <div class="prompt-card-text" data-i18n="prompt_card_4">Extract all action items into a checklist</div>
+                        <svg class="prompt-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+                    </div>
+                </div>
+
+                <button class="refresh-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    Refresh Prompts
+                </button>
+            </div>
+
+            <!-- Per-session prompt icon button (top-left of chat area) -->
+            <button id="session-prompt-btn" onclick="openSessionPromptModal()" title="Set system prompt for this session" style="position:absolute;top:12px;left:12px;z-index:10;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-muted);display:none;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;backdrop-filter:blur(8px)" onmouseenter="this.style.background='rgba(255,255,255,0.12)';this.style.color='var(--text-primary)';this.style.borderColor='var(--border-light)'" onmouseleave="this.style.background='rgba(255,255,255,0.06)';this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+            <!-- Active session prompt dot indicator -->
+            <span id="session-prompt-dot" style="display:none;position:absolute;top:10px;left:36px;z-index:11;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent)"></span>
+
+            <!-- Chat messages -->
+            <div class="chat-area"></div>
+
+            <!-- Task Mode Pane (hidden by default) -->
+            <div id="task-mode-pane" style="display:none; flex:1; flex-direction:column; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary);">
+
+                <!-- Header with tabs -->
+                <div style="padding:24px 40px 0; border-bottom:1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                        <div style="margin-bottom:16px;">
+                            <h2 style="font-weight:600; font-size:22px; color:var(--text-primary); margin-bottom:3px; display:flex; align-items:center; gap:10px;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Cowork File Agent
+                            </h2>
+                            <span style="font-size:12px; color:var(--text-muted);">AI-powered local filesystem tasks using your models</span>
+                        </div>
+                        <button onclick="closeTaskMode()" style="margin-bottom:16px; background:none; border:1px solid var(--border); border-radius:6px; padding:5px 12px; color:var(--text-muted); font-size:12px; cursor:pointer;">✕ Close</button>
+                    </div>
+                    <!-- Tabs -->
+                    <div style="display:flex; gap:0;">
+                        <button id="task-tab-run" class="task-tab task-tab-active" onclick="switchTaskTab('run')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Run Task
+                        </button>
+                        <button id="task-tab-folders" class="task-tab" onclick="switchTaskTab('folders')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            Folder Manager
+                            <span id="task-folders-badge" style="display:none; background:var(--accent); color:#fff; border-radius:10px; font-size:10px; padding:1px 6px; margin-left:4px;">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab: Run Task -->
+                <div id="task-panel-run" style="padding:28px 40px; flex:1;">
+                    <div style="background:var(--bg-tertiary); padding:24px; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:20px;">
+
+                        <label data-i18n="title_working_folder" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Working Folder</label>
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <input type="text" id="task-folder" placeholder="/Users/name/Documents" style="flex:1; padding:11px 14px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-family:var(--font-mono); font-size:13px; outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                            <button onclick="taskBrowseFolder()" title="Browse for folder" style="padding:0 14px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); cursor:pointer; display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; transition:all 0.15s;" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-primary)'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                <span data-i18n="btn_browse">Browse</span>
+                            </button>
+                            <button onclick="taskSaveFolder()" title="Save this folder" style="padding:0 14px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); cursor:pointer; display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; transition:all 0.15s;" onmouseenter="this.style.borderColor='var(--success,#30d158)';this.style.color='var(--success,#30d158)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-primary)'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                <span data-i18n="btn_save">Save</span>
+                            </button>
+                        </div>
+
+                        <!-- Saved folders quick-select -->
+                        <div id="task-quick-folders" style="display:none; margin-bottom:16px;">
+                            <label data-i18n="title_recent_folders" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Recent Folders</label>
+                            <div id="task-quick-folder-list" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+                        </div>
+
+                        <label data-i18n="title_task_instructions" style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:8px; margin-top:16px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">Task Instructions</label>
+                        <textarea id="task-desc" data-i18n="placeholder_task_desc" placeholder="E.g., Read the financial PDFs and summarize them into summary.txt" style="width:100%; min-height:100px; padding:14px; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); font-family:var(--font-main); font-size:14px; margin-bottom:12px; resize:vertical; outline:none; box-sizing:border-box;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+
+                        <!-- Pregenerated Quick Commands -->
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+                            <button data-i18n="prompt_card_1" onclick="document.getElementById('task-desc').value=this.innerText" style="padding:8px 12px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; color:var(--text-secondary); font-size:12px; cursor:pointer; text-align:left; transition:all 0.15s; flex:1; min-width:140px;" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--text-primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:6px;display:block;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                <span data-i18n="prompt_card_1">Tóm tắt các điểm chính từ tài liệu của tôi</span>
+                            </button>
+                            <button data-i18n="prompt_card_2" onclick="document.getElementById('task-desc').value=this.innerText" style="padding:8px 12px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; color:var(--text-secondary); font-size:12px; cursor:pointer; text-align:left; transition:all 0.15s; flex:1; min-width:140px;" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--text-primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:6px;display:block;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <span data-i18n="prompt_card_2">Viết email phản hồi dựa trên tài liệu</span>
+                            </button>
+                            <button data-i18n="prompt_card_3" onclick="document.getElementById('task-desc').value=this.innerText" style="padding:8px 12px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; color:var(--text-secondary); font-size:12px; cursor:pointer; text-align:left; transition:all 0.15s; flex:1; min-width:140px;" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--text-primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:6px;display:block;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                <span data-i18n="prompt_card_3">Giải thích chủ đề này cho một đứa trẻ 5 tuổi hiểu</span>
+                            </button>
+                            <button data-i18n="prompt_card_4" onclick="document.getElementById('task-desc').value=this.innerText" style="padding:8px 12px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; color:var(--text-secondary); font-size:12px; cursor:pointer; text-align:left; transition:all 0.15s; flex:1; min-width:140px;" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--text-primary)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:6px;display:block;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                <span data-i18n="prompt_card_4">Trích xuất các bước hành động thành một danh sách</span>
+                            </button>
+                        </div>
+
+                        <div style="display:flex; gap:10px; justify-content:flex-end;">
+                            <button id="task-stop-btn" data-i18n="btn_stop" onclick="stopTask()" style="background:var(--error,#ff453a); border:none; border-radius:6px; padding:9px 18px; color:#fff; font-size:13px; font-weight:500; cursor:pointer; display:none;">Stop</button>
+                            <button id="task-start-btn" onclick="startTask()" style="background:var(--accent); border:none; border-radius:6px; padding:9px 20px; color:#fff; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:8px;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span data-i18n="btn_launch">Launch</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="task-stream" style="display:flex; flex-direction:column; gap:10px; padding-bottom:60px;"></div>
+                </div>
+
+                <!-- Tab: Folder Manager -->
+                <div id="task-panel-folders" style="display:none; padding:28px 40px; flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <div>
+                            <h3 data-i18n="title_saved_folders" style="font-size:15px; font-weight:600; color:var(--text-primary); margin-bottom:3px;">Saved Folders</h3>
+                            <span data-i18n="desc_saved_folders" style="font-size:12px; color:var(--text-muted);">Quick-access folders for Cowork tasks</span>
+                        </div>
+                        <button onclick="taskBrowseAndSave()" style="padding:8px 14px; background:var(--accent); border:none; border-radius:6px; color:#fff; font-size:13px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <span data-i18n="btn_add_folder">Add Folder</span>
+                        </button>
+                    </div>
+                    <div id="task-folder-manager-list" style="display:flex; flex-direction:column; gap:8px;">
+                        <div style="text-align:center; padding:40px 20px; color:var(--text-muted); font-size:13px;">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:10px; opacity:0.4;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <p>No saved folders yet.<br>Add folders to quickly select them when running tasks.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compare area (split pane, hidden by default) -->
+            <div class="compare-area" id="compare-area" style="display:none">
+                <div class="compare-col">
+                    <div class="compare-header" id="compare-header-0">Model A</div>
+                    <div class="compare-messages" id="compare-messages-0"></div>
+                </div>
+                <div class="compare-divider"></div>
+                <div class="compare-col">
+                    <div class="compare-header" id="compare-header-1">Model B</div>
+                    <div class="compare-messages" id="compare-messages-1"></div>
+                </div>
+            </div>
+
+            <!-- Input area -->
+            <div class="input-area">
+                <div class="input-box">
+                    <div class="input-top">
+                        <textarea id="chat-input" placeholder="Type a message..." data-i18n="input_placeholder_chat" oninput="autoResizeInput(this)" onkeydown="handleEnter(event)"></textarea>
+                        <select class="model-select" id="model-select">
+                            <option>Loading...</option>
+                        </select>
+                    </div>
+                    <div class="input-bottom">
+                        <div class="input-actions">
+                            <button class="input-action-btn" onclick="openUploadPanel()">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                Docs
+                            </button>
+                            <button class="input-action-btn" onclick="attachImage()" title="Attach image (vision models)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                Image
+                            </button>
+                            <button class="input-action-btn" id="voice-btn" onclick="toggleVoice()" title="Voice input (Whisper)">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                            </button>
+                            <button class="input-action-btn" id="deep-think-btn" onclick="toggleDeepThink()" title="Agentic Reflection Loop: Give the model time to draft and critique internally">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+                                Deep Think
+                            </button>
+                            <button class="input-action-btn" id="compare-toggle-btn" onclick="toggleCompareMode()" title="Compare two models side-by-side" style="display:none;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="8" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/></svg>
+                                Compare
+                            </button>
+                            <select class="model-select" id="mode-select" style="margin-left:0">
+                                <option value="docs">My Docs</option>
+                                <option value="web">Web Search</option>
+                                <option value="plain">No Context</option>
+                            </select>
+                            <select class="model-select" id="knowledge-select" title="Knowledge source" style="margin-left:0;max-width:140px" onchange="onKnowledgeChange(this.value)">
+                                <option value="">All Knowledge</option>
+                            </select>
+                            <span id="rag-stats" style="font-size:11px;color:var(--text-muted)"></span>
+                        </div>
+                        <div class="input-right">
+                            <span class="char-count">0/1000</span>
+                            <button class="send-btn" id="send-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <!-- Right Side: Document Viewer -->
+        <div id="doc-viewer-pane" class="doc-viewer-pane" style="display:none;">
+            <!-- Resize Handle -->
+            <div id="doc-viewer-resizer" class="doc-viewer-resizer"></div>
+
+            <!-- Viewer Header -->
+            <div class="doc-viewer-header">
+                <!-- Mode tabs -->
+                <div class="doc-viewer-tabs">
+                    <button class="doc-viewer-tab active" id="tab-source" onclick="switchViewerTab('source')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        Source
+                    </button>
+                    <button class="doc-viewer-tab" id="tab-artifact" onclick="switchViewerTab('artifact')">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 22h20L12 2z"/></svg>
+                        Artifact
+                    </button>
+                </div>
+
+                <!-- Title + actions -->
+                <div class="doc-viewer-title-row">
+                    <div class="doc-viewer-title-group">
+                        <span id="doc-viewer-icon" class="doc-viewer-type-icon">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </span>
+                        <span id="doc-viewer-name" class="doc-viewer-filename">No document selected</span>
+                        <span id="doc-viewer-badge" class="doc-viewer-badge" style="display:none"></span>
+                    </div>
+                    <div class="doc-viewer-actions">
+                        <button id="doc-viewer-copy-btn" class="doc-viewer-action-btn" onclick="copyDocViewerContent()" title="Copy content">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                        <button id="doc-viewer-download-btn" class="doc-viewer-action-btn" onclick="downloadDocViewerContent()" title="Download" style="display:none">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </button>
+                        <button class="doc-viewer-action-btn doc-viewer-close-btn" onclick="closeDocViewer()" title="Close">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chunk navigator (source mode only) -->
+                <div id="doc-viewer-chunk-nav" class="doc-viewer-chunk-nav" style="display:none">
+                    <span id="doc-viewer-chunk-label" style="font-size:11px;color:var(--text-muted)">Referenced passages</span>
+                    <div id="doc-viewer-chunk-pills" class="doc-viewer-chunk-pills"></div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="doc-viewer-body">
+                <!-- Source text viewer -->
+                <div id="doc-viewer-source" class="doc-viewer-source active">
+                    <div id="doc-viewer-loading" class="doc-viewer-loading" style="display:none">
+                        <div class="doc-viewer-spinner"></div>
+                        <span data-i18n="title_documents_sidebar">Files (Current Session Context)</span>
+                    </div>
+                    <div id="doc-viewer-empty" class="doc-viewer-empty">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <p>Click a source citation in the chat to view the referenced document here.</p>
+                    </div>
+                    <div id="doc-viewer-text-wrap" class="doc-viewer-text-wrap" style="display:none">
+                        <div id="doc-viewer-text" class="doc-viewer-text"></div>
+                    </div>
+                </div>
+
+                <!-- Artifact iframe viewer -->
+                <div id="doc-viewer-artifact" class="doc-viewer-artifact" style="display:none">
+                    <iframe id="doc-viewer-iframe" src="about:blank" sandbox="allow-scripts" class="doc-viewer-iframe"></iframe>
+                </div>
+            </div>
+
+            <!-- Footer: page info -->
+            <div class="doc-viewer-footer" id="doc-viewer-footer" style="display:none">
+                <span id="doc-viewer-page-info" style="font-size:11px;color:var(--text-muted)"></span>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Upload Panel -->
+<div class="panel-overlay" id="upload-panel">
+    <div class="panel">
+        <h3>Manage Documents</h3>
+
+        <div class="panel-field">
+            <label>Knowledge Folders <span style="font-size:11px;color:var(--text-muted);font-weight:400">(each folder gets its own isolated index)</span></label>
+            <div style="display:flex;gap:6px;margin-bottom:6px">
+                <button class="btn btn-outline" onclick="browseFolder('watch-folder-path')" style="padding:0 8px" title="Browse Native Finder">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <input type="text" id="watch-folder-path" placeholder="/path/to/folder" style="flex:2">
+                <input type="text" id="watch-folder-label" placeholder="Label (optional)" style="flex:1">
+                <button class="btn" onclick="addWatchFolder()" style="white-space:nowrap">Watch</button>
+            </div>
+            <div id="watch-status" style="font-size:12px;color:var(--text-muted);margin-top:4px"></div>
+            <div id="watch-progress-container" class="upload-progress-container">
+                <div id="watch-progress-bar" class="upload-progress-bar"></div>
+            </div>
+            <div id="watch-folders" style="margin-top:6px;display:flex;flex-direction:column;gap:6px"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;">
+                <button class="btn btn-outline" onclick="forceScan()" style="flex:1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:6px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Scan now
+                </button>
+                <button class="btn btn-outline" onclick="reindexAll()" style="flex:1" title="Clear index and re-ingest all files from scratch">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:6px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Re-index All
+                </button>
+            </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+
+        <div class="panel-field">
+            <label>Upload files (.txt, .pdf, .docx, .md, .csv, .xml)</label>
+            <input type="file" id="file-upload-input" accept=".txt,.pdf,.docx,.md,.csv,.xml"
+                   multiple style="display:none" onchange="handleFileUpload(this)">
+            <button class="btn" onclick="document.getElementById('file-upload-input').click()" style="width:100%">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Choose Files
+            </button>
+        </div>
+
+        <div id="upload-status" style="font-size:13px;color:var(--text-secondary);margin:8px 0"></div>
+        <div id="upload-progress-container" class="upload-progress-container">
+            <div id="upload-progress-bar" class="upload-progress-bar"></div>
+        </div>
+        <div class="file-list" id="file-list"></div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+
+        <!-- Indexed Files Manager -->
+        <div class="panel-field">
+            <label style="display:flex;justify-content:space-between;align-items:center">
+                <span>Indexed Files</span>
+                <button class="btn btn-outline" onclick="loadUploadedFiles()" style="font-size:11px;padding:3px 8px">Refresh</button>
+            </label>
+            <div id="uploaded-files-list" style="max-height:180px;overflow-y:auto;margin-top:6px;display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:12px;color:var(--text-muted)">Click Refresh to see uploaded files</div>
+            </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+        <button class="btn btn-outline" onclick="summarizeDocs()" style="width:100%;margin-bottom:12px;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span data-i18n="btn_summarize_all">Summarize All Documents</span></button>
+
+        <div style="display:flex;gap:8px;margin-top:0">
+            <button class="btn btn-outline" onclick="clearDocuments()">Clear All</button>
+            <button class="btn" onclick="$('#upload-panel').classList.remove('active')" data-i18n="btn_close">Close</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Settings Panel -->
+<div class="panel-overlay" id="settings-panel">
+    <div class="panel" style="max-width:560px">
+        <h3>Model Manager</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">GGUF models from HuggingFace. Drop files into the <code>models/</code> folder or download below.</p>
+
+        <!-- Currently loaded -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;padding:10px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <div class="status-dot connected" style="margin:0;flex-shrink:0"></div>
+            <span style="font-size:13px;color:var(--text-secondary)">Loaded:</span>
+            <span id="loaded-model-name" style="font-size:13px;color:var(--text-primary);font-weight:500">None</span>
+            <button class="btn btn-outline" onclick="unloadCurrentModel()" style="margin-left:auto;font-size:11px;padding:3px 10px">Unload</button>
+        </div>
+
+        <!-- Installed models -->
+        <div class="panel-field">
+            <label style="display:flex;justify-content:space-between;align-items:center">
+                <span>Installed Models</span>
+                <button class="btn btn-outline" onclick="loadModels()" style="font-size:11px;padding:3px 8px">Refresh</button>
+            </label>
+            <div id="model-manager-list" class="file-list" style="margin-top:6px;margin-bottom:8px;max-height:200px;overflow-y:auto"></div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+
+        <!-- Model Directories -->
+        <div class="panel-field">
+            <label>Model Directories</label>
+            <div id="model-dirs-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+            <div style="display:flex;gap:8px">
+                <button class="btn btn-outline" onclick="browseFolder('add-model-dir-path')" style="padding:0 8px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <input type="text" id="add-model-dir-path" placeholder="/path/to/extra/models" style="flex:1">
+                <button class="btn btn-outline" onclick="addModelDir()" style="white-space:nowrap">Add Folder</button>
+            </div>
+            <div id="model-dir-status" style="font-size:12px;color:var(--text-muted);margin-top:6px"></div>
+        </div>
+
+
+        <!-- Download from HuggingFace -->
+        <div class="panel-field">
+            <label>Download from HuggingFace</label>
+            <div style="display:flex;gap:12px;margin-bottom:8px;font-size:13px">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--text-secondary)">
+                    <input type="radio" name="dl-format" value="gguf" checked onchange="toggleDlFormat()" style="accent-color:var(--accent)"> GGUF (single file)
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--text-secondary)">
+                    <input type="radio" name="dl-format" value="safetensors" onchange="toggleDlFormat()" style="accent-color:var(--accent)"> SafeTensors (full model)
+                </label>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:6px">
+                <input type="text" id="hf-repo" placeholder="e.g. bartowski/Llama-3.2-3B-Instruct-GGUF" style="flex:2">
+                <input type="text" id="hf-file" placeholder="e.g. Llama-3.2-3B-Instruct-Q4_K_M.gguf" style="flex:2">
+            </div>
+            <button class="btn" onclick="downloadHFModel()" id="hf-download-btn" style="width:100%">Download Model</button>
+            <div id="hf-download-status" style="font-size:12px;color:var(--text-muted);margin-top:6px"></div>
+        </div>
+
+        <!-- Import local file or folder -->
+        <div class="panel-field">
+            <label>Import local model (GGUF file or SafeTensors folder)</label>
+            <div style="display:flex;gap:8px">
+                <input type="text" id="import-path" placeholder="/path/to/model.gguf or /path/to/model-dir/" style="flex:1">
+                <button class="btn btn-outline" onclick="importLocalModel()" style="white-space:nowrap">Import</button>
+            </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+
+        <!-- App Language -->
+        <div class="panel-field">
+            <label style="display:flex;justify-content:space-between;align-items:center">
+                <span data-i18n="title_app_language">App Language</span>
+            </label>
+            <select id="app-language-select" onchange="changeLanguage(this.value)" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:8px 12px;font-size:14px;font-family:var(--font-main);outline:none;margin-top:6px;">
+                <option value="en">English</option>
+                <option value="vi">Tiếng Việt (Vietnamese)</option>
+                <option value="zh-TW">繁體中文 (Traditional Chinese)</option>
+                <option value="ru">Русский (Russian)</option>
+            </select>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+
+        <!-- System Prompt -->
+        <div class="panel-field">
+            <label style="display:flex;justify-content:space-between;align-items:center">
+                <span data-i18n="title_sys_prompt">System Prompt</span>
+                <span id="system-prompt-status" style="font-size:11px;color:var(--text-muted)"></span>
+            </label>
+            <textarea id="system-prompt-input" style="width:100%;min-height:100px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px 12px;font-size:14px;font-family:var(--font-main);outline:none;resize:vertical"
+                placeholder="Enter a custom system prompt to change how the AI behaves globally. Leave blank to use the default."
+                onblur="saveSystemPrompt()"></textarea>
+            <div style="display:flex;gap:8px;margin-top:6px">
+                <button class="btn btn-outline" onclick="saveSystemPrompt()" style="font-size:12px;padding:4px 12px">Save</button>
+                <button class="btn btn-outline" onclick="resetSystemPrompt()" style="font-size:12px;padding:4px 12px;color:var(--text-muted)" data-i18n="btn_reset_default">Reset to Default</button>
+            </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+
+        <!-- Ollama Server -->
+        <div class="panel-field">
+            <label style="display:flex;justify-content:space-between;align-items:center;">
+                <span>Ollama Server</span>
+                <span id="ollama-status-badge" style="font-size:11px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text-muted)">Not checked</span>
+            </label>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px" data-i18n="desc_ollama">Connect to a local or remote Ollama instance to use Ollama models alongside local GGUF models.</p>
+            <div style="display:flex;gap:8px;margin-bottom:6px">
+                <input type="url" id="ollama-url-input" placeholder="http://localhost:11434" style="flex:1">
+                <button class="btn" onclick="saveOllamaUrl()" id="ollama-save-btn" style="white-space:nowrap">Test & Save</button>
+            </div>
+            <div id="ollama-status-msg" style="font-size:12px;color:var(--text-muted)"></div>
+            <div id="ollama-models-list" style="margin-top:8px;display:flex;flex-direction:column;gap:4px"></div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+
+        <!-- MCP Connections -->
+        <div class="panel-field">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                <span>MCP Connections</span>
+                <span style="font-size:11px; background:var(--accent); color:var(--text-button); padding:2px 6px; border-radius:4px; font-weight:600;">BETA</span>
+            </label>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;" data-i18n="desc_mcp">Add Model Context Protocol (MCP) servers to give the AI access to external tools.</p>
+            
+            <div id="mcp-servers-list" style="margin-bottom:8px; display:flex; flex-direction:column; gap:6px;">
+                <!-- Dynamically populated -->
+            </div>
+            
+            <div style="display:flex; gap:6px; margin-bottom:6px;">
+                <input type="text" id="mcp-name" placeholder="Name (e.g. FileSystem)" style="flex:1;">
+                <input type="text" id="mcp-command" placeholder="System Command (e.g. npx)" style="flex:1;">
+            </div>
+            <div style="display:flex; gap:6px;">
+                <input type="text" id="mcp-args" placeholder="Arguments (e.g. -y @modelcontextprotocol/server-filesystem /Users)" style="flex:1;">
+                <button class="btn btn-outline" onclick="addMcpServer(this)" style="white-space:nowrap;">Add Plugin</button>
+            </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+        <!-- Theme Switcher -->
+        <div class="panel-field">
+            <label>Appearance Theme</label>
+            <div class="theme-swatches" id="theme-swatches" style="margin-bottom:16px;">
+                <div class="theme-swatch active" data-theme="dark" onclick="applyTheme('dark')" title="Dark">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Dark</span>
+                </div>
+                <div class="theme-swatch" data-theme="light" onclick="applyTheme('light')" title="Light">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Light</span>
+                </div>
+                <div class="theme-swatch" data-theme="midnight" onclick="applyTheme('midnight')" title="Midnight">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Midnight</span>
+                </div>
+                <div class="theme-swatch" data-theme="nord" onclick="applyTheme('nord')" title="Nord">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Nord</span>
+                </div>
+                <div class="theme-swatch" data-theme="dracula" onclick="applyTheme('dracula')" title="Dracula">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Dracula</span>
+                </div>
+                <div class="theme-swatch" data-theme="rose" onclick="applyTheme('rose')" title="Rosé Pine">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Rosé</span>
+                </div>
+                <div class="theme-swatch" data-theme="solarized" onclick="applyTheme('solarized')" title="Solarized">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Solar</span>
+                </div>
+                <div class="theme-swatch" data-theme="forest" onclick="applyTheme('forest')" title="Forest">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Forest</span>
+                </div>
+                <div class="theme-swatch" data-theme="ocean" onclick="applyTheme('ocean')" title="Ocean">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Ocean</span>
+                </div>
+                <div class="theme-swatch" data-theme="monokai" onclick="applyTheme('monokai')" title="Monokai">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Monokai</span>
+                </div>
+                <div class="theme-swatch" data-theme="catppuccin" onclick="applyTheme('catppuccin')" title="Catppuccin Mocha">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Catppuccin</span>
+                </div>
+                <div class="theme-swatch" data-theme="crimson" onclick="applyTheme('crimson')" title="Crimson">
+                    <div class="theme-swatch-preview"></div>
+                    <span class="theme-swatch-label">Crimson</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+        <!-- Danger Zone -->
+        <div class="panel-field" style="background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.3); padding:12px; border-radius:var(--radius-sm);">
+            <label style="color:#ef4444; font-weight:600; margin-bottom:4px;">Danger Zone</label>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Irreversibly delete all chat history, documents, personas, and configurations. The app will be reset to its original factory state.</p>
+            <button class="btn" style="background:#ef4444; color:#fff; border:none; width:100%;" onclick="factoryReset()">Factory Reset App</button>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:1rem">
+            <button class="btn" onclick="$('#settings-panel').classList.remove('active')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Templates Panel -->
+<div class="panel-overlay" id="templates-panel">
+    <div class="panel" style="max-width:520px">
+        <h3 data-i18n="title_document_templates">Document Templates</h3>
+
+        <!-- Tab Switcher -->
+        <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:1.2rem">
+            <button id="tmpl-tab-ai" onclick="switchTemplateTab('ai')"
+                style="flex:1;padding:8px;font-size:13px;font-family:var(--font-main);border:none;cursor:pointer;background:var(--accent);color:#fff;transition:all 0.15s" data-i18n="tab_ai_fill">
+                🤖 AI Fill
+            </button>
+            <button id="tmpl-tab-smart" onclick="switchTemplateTab('smart')"
+                style="flex:1;padding:8px;font-size:13px;font-family:var(--font-main);border:none;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all 0.15s" data-i18n="tab_smart_fill">
+                ✨ Smart Fill
+            </button>
+        </div>
+
+        <!-- ── Tab 1: AI Fill (existing) ── -->
+        <div id="tmpl-panel-ai">
+            <div class="panel-field">
+                <label data-i18n="msg_upload_template">Upload a template (.docx, .pdf, .txt, .md)</label>
+                <button class="btn" onclick="uploadTemplate()" style="width:100%" data-i18n="btn_choose_template">Choose Template File</button>
+            </div>
+            <div id="template-status" style="font-size:13px;color:var(--text-secondary);margin:8px 0"></div>
+            <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">Saved templates</div>
+            <div id="template-list" class="file-list" style="max-height:180px;overflow-y:auto"></div>
+            <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+            <div class="panel-field">
+                <label>Fill a template with AI</label>
+                <select id="template-select" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:8px 12px;font-size:14px;font-family:var(--font-main);outline:none;margin-bottom:8px">
+                    <option value="">Select a template...</option>
+                </select>
+                <textarea id="fill-instructions" style="width:100%;min-height:80px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px 12px;font-size:14px;font-family:var(--font-main);outline:none;resize:vertical" placeholder="Enter the information to fill in. Example: Company name: OpenChat Inc, Date: April 6 2026, Amount: $5,000..."></textarea>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button class="btn" onclick="fillTemplate('docx')" style="flex:1">Generate .docx</button>
+                    <button class="btn" onclick="fillTemplate('pdf')" style="flex:1">Generate .pdf</button>
+                </div>
+            </div>
+            <div id="fill-status" style="font-size:13px;color:var(--text-secondary);margin:8px 0"></div>
+        </div>
+
+        <!-- ── Tab 2: Smart Fill (new) ── -->
+        <div id="tmpl-panel-smart" style="display:none">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
+                Upload a blank <strong>template form</strong> and a <strong>content source</strong> file — the AI will automatically map the content into the template's structure.
+            </p>
+
+            <!-- Template file drop zone -->
+            <div class="panel-field">
+                <label>① Template File <span style="color:var(--text-muted);font-size:11px">(blank form to fill)</span></label>
+                <div id="sf-template-zone" onclick="document.getElementById('sf-template-input').click()"
+                    style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:18px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--text-muted);font-size:13px">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:6px;opacity:0.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <div id="sf-template-label">Click to choose template (.docx, .pdf, .txt)</div>
+                </div>
+                <input type="file" id="sf-template-input" accept=".docx,.pdf,.txt,.md" style="display:none"
+                    onchange="sfFileChosen('template', this)">
+            </div>
+
+            <!-- Content file drop zone -->
+            <div class="panel-field" style="margin-top:12px">
+                <label>② Content Source <span style="color:var(--text-muted);font-size:11px">(your data / notes to insert)</span></label>
+                <div id="sf-content-zone" onclick="document.getElementById('sf-content-input').click()"
+                    style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:18px;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--text-muted);font-size:13px">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:6px;opacity:0.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                    <div id="sf-content-label">Click to choose content file (.docx, .pdf, .txt)</div>
+                </div>
+                <input type="file" id="sf-content-input" accept=".docx,.pdf,.txt,.md,.csv" style="display:none"
+                    onchange="sfFileChosen('content', this)">
+            </div>
+
+            <!-- Output format + generate -->
+            <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+                <label style="font-size:13px;color:var(--text-secondary);white-space:nowrap">Output as:</label>
+                <select id="sf-format" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:6px 10px;font-size:13px;font-family:var(--font-main);outline:none">
+                    <option value="docx">Word (.docx)</option>
+                    <option value="pdf">PDF (.pdf)</option>
+                </select>
+                <button class="btn" id="sf-generate-btn" onclick="smartFillForm()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <span data-i18n="btn_generate">Generate</span>
+                </button>
+            </div>
+
+            <!-- Status + result -->
+            <div id="sf-status" style="font-size:13px;color:var(--text-secondary);margin-top:12px;min-height:20px"></div>
+            <div id="sf-result" style="display:none;margin-top:12px;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-sm)">
+                <div style="font-size:13px;color:var(--text-primary);margin-bottom:8px;font-weight:500">✅ Document ready</div>
+                <div style="display:flex;gap:8px">
+                    <a id="sf-download-link" class="btn" style="flex:1;text-align:center;text-decoration:none" download>Download</a>
+                    <button class="btn btn-outline" onclick="sfPreview()" style="flex:1">Preview</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:1.2rem">
+            <button class="btn btn-outline" onclick="$('#templates-panel').classList.remove('active')" style="flex:1">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Memory Panel -->
+<div class="panel-overlay" id="memory-panel">
+    <div class="panel">
+        <h3 data-i18n="title_ai_memory">AI Memory</h3>
+        <p style="font-size:13px;color:var(--text-secondary);line-height:1.4;margin-bottom:1rem" data-i18n="msg_memory_desc">The AI automatically extracts and remembers facts about you across all conversations.</p>
+
+        <div class="panel-field">
+            <label data-i18n="label_add_memory">Add new memory</label>
+            <div style="display:flex;gap:8px;margin-bottom:6px">
+                <input type="text" id="memory-key" placeholder="Label (e.g. Job, Language)" style="flex:1">
+                <input type="text" id="memory-value" placeholder="Value (e.g. Software Engineer)" style="flex:2">
+            </div>
+            <button class="btn" onclick="addMemory()" style="width:100%" data-i18n="btn_add">Save Memory</button>
+        </div>
+
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">Saved memories</div>
+        <div id="memory-list" class="file-list" style="max-height:300px;overflow-y:auto"></div>
+
+        <div style="display:flex;gap:8px;margin-top:1rem">
+            <button class="btn" onclick="$('#memory-panel').classList.remove('active')" data-i18n="btn_close">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Compare Panel (second model selector, shown when compare mode is on) -->
+<div id="compare-model-bar" style="display:none;padding:6px 16px;background:var(--bg-secondary);border-top:1px solid var(--border);font-size:13px;color:var(--text-secondary);align-items:center;gap:12px">
+    <span>Compare:</span>
+    <select class="model-select" id="compare-model-a" style="max-width:160px"><option>Loading...</option></select>
+    <span style="color:var(--text-muted)">vs</span>
+    <select class="model-select" id="compare-model-b" style="max-width:160px"><option>Loading...</option></select>
+    <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Responses shown side-by-side</span>
+</div>
+
+<!-- History Panel -->
+<div class="panel-overlay" id="history-panel">
+    <div class="panel">
+        <h3>Chat History</h3>
+        <div id="conversation-list" class="file-list" style="max-height:400px;overflow-y:auto"></div>
+        <div style="border-top:1px solid var(--border);margin:1rem 0;opacity:0.5"></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">Export current chat</div>
+        <div style="display:flex;gap:8px">
+            <button class="btn btn-outline" onclick="exportConversation('md')">Export .md</button>
+            <button class="btn btn-outline" onclick="exportConversation('pdf')">Export .pdf</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:1rem">
+            <button class="btn" onclick="$('#history-panel').classList.remove('active')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Authentication Lock Modal -->
+<div class="panel-overlay" id="auth-modal" style="z-index:9999; backdrop-filter:blur(10px); background:var(--bg-primary);">
+    <div class="panel" style="max-width:320px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+        <div style="width:48px;height:48px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3 id="auth-title" data-i18n="auth_title" style="margin-bottom:8px;">App Locked</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;" data-i18n="auth_desc">Enter the password to access OpenChat.</p>
+        <input type="password" id="auth-password" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px 12px;font-size:14px;margin-bottom:12px;transition:border-color 0.2s;" placeholder="Password..." onkeypress="if(event.key === 'Enter') submitAuth()">
+        <div id="auth-error" style="display:none;color:#f87171;font-size:12px;margin-bottom:12px;padding:6px 10px;background:rgba(239,68,68,0.1);border-radius:5px;text-align:left;"></div>
+        <button class="btn" style="width:100%;padding:10px;font-size:14px;" onclick="submitAuth()" data-i18n="auth_unlock">Unlock</button>
+    </div>
+</div>
+
+<!-- ── New Chat Type Picker ─────────────────────────────── -->
+<div class="panel-overlay" id="new-chat-picker" style="z-index:9999;" onclick="if(event.target===this)this.classList.remove('active')">
+    <div class="panel" style="max-width:420px;text-align:center;">
+        <h3 style="margin-bottom:6px">New Conversation</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.5rem">Choose how you'd like to start</p>
+        <div style="display:flex;gap:12px;">
+            <button class="new-chat-option-card" onclick="startRegularChat()" id="regular-chat-card">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px">Regular Chat</div>
+                <div style="font-size:12px;color:var(--text-muted)">Saved to history, searchable</div>
+            </button>
+            <button class="new-chat-option-card" onclick="openPrivateChatSetup()" id="private-chat-card">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:8px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <div style="font-size:15px;font-weight:600;margin-bottom:4px">Private Session</div>
+                <div style="font-size:12px;color:var(--text-muted)">Password + Touch ID locked</div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Private Chat Password Setup ────────────────────────── -->
+<div class="panel-overlay" id="private-chat-setup" style="z-index:10000;" onclick="if(event.target===this)this.classList.remove('active')">
+    <div class="panel" style="max-width:360px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <h3 style="margin:0">Set Session Password</h3>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">This chat will show as <strong>"Locked Chat"</strong> in your history. You'll need this password or Touch ID to open it.</p>
+        <div class="panel-field" style="margin-bottom:12px">
+            <label>Password</label>
+            <input type="password" id="private-pwd-input" placeholder="Enter a strong password" autocomplete="new-password"
+                   style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:8px 12px;font-size:14px;font-family:var(--font-main);outline:none;box-sizing:border-box"
+                   onkeypress="if(event.key==='Enter')document.getElementById('private-pwd-confirm').focus()">
+        </div>
+        <div class="panel-field" style="margin-bottom:1.5rem">
+            <label>Confirm Password</label>
+            <input type="password" id="private-pwd-confirm" placeholder="Confirm password" autocomplete="new-password"
+                   style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:8px 12px;font-size:14px;font-family:var(--font-main);outline:none;box-sizing:border-box"
+                   onkeypress="if(event.key==='Enter')createPrivateChat()">
+        </div>
+        <div id="private-pwd-error" style="color:var(--error);font-size:12px;margin-bottom:10px;min-height:16px"></div>
+        <div style="display:flex;gap:8px">
+            <button class="btn btn-outline" style="flex:1" onclick="$('#private-chat-setup').classList.remove('active')">Cancel</button>
+            <button class="btn" style="flex:1" onclick="createPrivateChat()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:5px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Lock &amp; Start
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Chat Unlock Modal ───────────────────────────────────── -->
+<div class="panel-overlay" id="chat-unlock-modal" style="z-index:10000;" onclick="if(event.target===this)this.classList.remove('active')">
+    <div class="panel" style="max-width:340px;text-align:center">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" style="margin-bottom:12px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <h3 style="margin-bottom:6px">Locked Chat</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.2rem">Enter your password or use Touch ID to open this session</p>
+        <input type="password" id="unlock-pwd-input" placeholder="Password..." autocomplete="current-password"
+               style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:8px 12px;font-size:14px;font-family:var(--font-main);outline:none;box-sizing:border-box;margin-bottom:10px"
+               onkeypress="if(event.key==='Enter')submitUnlock()">
+        <div id="unlock-error" style="color:var(--error);font-size:12px;margin-bottom:10px;min-height:16px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-outline" style="flex:1" onclick="$('#chat-unlock-modal').classList.remove('active')">Cancel</button>
+            <button class="btn" style="flex:1" onclick="submitUnlock()">Unlock</button>
+        </div>
+        <button class="btn btn-outline" style="width:100%" onclick="unlockWithTouchID()" id="touchid-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="vertical-align:-3px;margin-right:6px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Use Touch ID / Face ID
+        </button>
+    </div>
+</div>
+
+<!-- Per-session System Prompt Modal -->
+<div class="panel-overlay" id="session-prompt-modal" onclick="if(event.target===this)closeSessionPromptModal()" style="z-index:9999;">
+    <div class="panel" style="max-width:540px">
+        <h3 style="margin-bottom:6px">Session System Prompt</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
+            Override the AI's behaviour for <strong>this chat session only</strong>. Leave blank to use the global system prompt from Settings.
+        </p>
+        <textarea id="session-prompt-textarea"
+            style="width:100%;min-height:140px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:12px 14px;font-size:14px;font-family:var(--font-main);outline:none;resize:vertical;line-height:1.5"
+            placeholder="e.g. You are a concise assistant. Always reply in bullet points. Never use markdown headers."
+            maxlength="2000"
+            oninput="$('#session-prompt-charcount').textContent=this.value.length+'/2000'"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:4px;margin-bottom:10px">
+            <span id="session-prompt-charcount" style="font-size:11px;color:var(--text-muted)">0/2000</span>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button class="btn" onclick="saveSessionPrompt()" style="flex:2">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Apply to Session
+            </button>
+            <button class="btn btn-outline" onclick="clearSessionPrompt()" style="flex:1;color:var(--text-muted)">Clear</button>
+            <button class="btn btn-outline" onclick="closeSessionPromptModal()" style="flex:1">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Input Prompt Modal Fallback -->
+<div class="panel-overlay" id="custom-prompt-modal" style="display:none;z-index:99999;" onclick="if(event.target===this) { document.getElementById('custom-prompt-cancel').click(); }">
+    <div class="panel" style="max-width:400px; padding:24px;">
+        <h3 id="custom-prompt-title" style="margin-bottom:6px">Title</h3>
+        <p id="custom-prompt-text" style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Text</p>
+        <input type="text" id="custom-prompt-input" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px 12px;font-size:14px;font-family:var(--font-main);outline:none;margin-bottom:16px;">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-outline" id="custom-prompt-cancel" style="flex:1">Cancel</button>
+            <button class="btn" id="custom-prompt-ok" style="flex:1">OK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
