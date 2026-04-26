@@ -1,0 +1,9 @@
+--- static/css/style.css
++++ static/css/style.css
+@@ -572,6 +572,8 @@
+     display: flex;
+     justify-content: flex-end;
+     width: 100%;
++    align-items: center;
++    gap: 8px;
+ }
